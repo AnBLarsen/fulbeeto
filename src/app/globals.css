@@ -1,0 +1,51 @@
+@import "tailwindcss";
+
+@theme {
+  /* Brand colors */
+  --color-bee-yellow: #F5C400;
+  --color-bee-black: #1A1A1A;
+  --color-bee-stripe: #2D2D2D;
+  --color-bee-green: #00A550;
+  --color-bee-amber: #FFA500;
+
+  /* Custom font */
+  --font-display: var(--font-display), system-ui, sans-serif;
+
+  /* Animations */
+  --animate-buzz: buzz 0.3s ease-in-out infinite;
+  --animate-float: float 3s ease-in-out infinite;
+  --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes buzz {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-1px) rotate(-1deg); }
+  75% { transform: translateX(1px) rotate(1deg); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+body {
+  background-color: var(--color-bee-black);
+  color: #f0f0f0;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+/* Bee stripe pattern used on cards */
+.bee-stripes {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 10px,
+    rgba(245, 196, 0, 0.04) 10px,
+    rgba(245, 196, 0, 0.04) 20px
+  );
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #2d2d2d; }
+::-webkit-scrollbar-thumb { background: var(--color-bee-yellow); border-radius: 3px; }
