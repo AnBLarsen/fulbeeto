@@ -48,6 +48,7 @@ function TeamCrest({ crest, name, size = 40 }: { crest: string; name: string; si
       alt={name}
       width={size}
       height={size}
+      style={{ width: size, height: size }}
       className="object-contain"
       unoptimized
     />

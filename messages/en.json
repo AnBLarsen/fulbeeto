@@ -1,0 +1,56 @@
+{
+  "nav": {
+    "matches": "Matches",
+    "standings": "Standings"
+  },
+  "games": {
+    "title": "World Cup Matches 2026",
+    "today": "Today",
+    "beebotHint": "BeeBot soccer expert — ask it anything",
+    "noMatches": "No matches today",
+    "noMatchesSub": "Check back tomorrow, or ask BeeBot about upcoming matches."
+  },
+  "countdown": {
+    "warmingUp": "The Hive is warming up",
+    "soon": "No matches today — but the World Cup is almost here",
+    "openingMatch": "Opening match",
+    "days": "Days",
+    "hours": "Hours",
+    "mins": "Mins",
+    "secs": "Secs",
+    "started": "It's time! 🎉",
+    "startedSub": "The World Cup is underway — check back soon for today's games.",
+    "beebotHint": "Ask BeeBot about groups, teams, or predictions while you wait"
+  },
+  "standings": {
+    "title": "Group Standings",
+    "subtitle": "World Cup 2026 — top 2 from each group advance",
+    "noStandings": "No standings yet",
+    "noStandingsSub": "Group stage may not have started. Ask BeeBot for details.",
+    "advance": "top 2 advance",
+    "cols": {
+      "team": "Team",
+      "form": "Form"
+    }
+  },
+  "team": {
+    "wcStats": "World Cup 2026 Stats",
+    "played": "Played",
+    "wins": "Wins",
+    "draws": "Draws",
+    "goalsFor": "Goals For",
+    "matches": "Matches",
+    "squad": "Squad",
+    "founded": "Est."
+  },
+  "chat": {
+    "intro": "Buzz buzz! I'm BeeBot 🐝 — ask me anything about the World Cup. Matches, standings, predictions",
+    "placeholder": "Ask BeeBot anything...",
+    "poweredBy": "Powered by Claude · Live World Cup data",
+    "p1": "Who's playing today?",
+    "p2": "Show me Group A standings",
+    "p3": "Which team has scored the most goals?",
+    "p4": "Predict the quarter-finalists",
+    "error": "Bzzt — something went wrong. Try again in a moment! 🐝"
+  }
+}

@@ -1,13 +1,14 @@
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { getTeamDetail, getTeamMatches } from "@/lib/football-api";
 import type { FDMatch } from "@/types/football";
 
 export const revalidate = 300;
 
 interface Params {
-  params: Promise<{ id: string }>;
+  params: Promise<{ id: string; locale: string }>;
 }
 
 function MatchRow({ match, teamId }: { match: FDMatch; teamId: number }) {
@@ -18,14 +19,10 @@ function MatchRow({ match, teamId }: { match: FDMatch; teamId: number }) {
   const teamGoals = isHome ? score.home : score.away;
   const oppGoals = isHome ? score.away : score.home;
   const result =
-    match.score.winner === null
-      ? "—"
-      : match.score.winner === "DRAW"
-      ? "D"
-      : (isHome && match.score.winner === "HOME_TEAM") ||
-        (!isHome && match.score.winner === "AWAY_TEAM")
-      ? "W"
-      : "L";
+    match.score.winner === null ? "—"
+    : match.score.winner === "DRAW" ? "D"
+    : (isHome && match.score.winner === "HOME_TEAM") || (!isHome && match.score.winner === "AWAY_TEAM") ? "W"
+    : "L";
 
   const resultColor =
     result === "W" ? "text-bee-green" : result === "L" ? "text-red-400" : "text-gray-400";
@@ -53,6 +50,7 @@ function MatchRow({ match, teamId }: { match: FDMatch; teamId: number }) {
 
 export default async function TeamPage({ params }: Params) {
   const { id } = await params;
+  const t = await getTranslations("team");
   const teamId = Number(id);
   if (isNaN(teamId)) notFound();
 
@@ -70,7 +68,6 @@ export default async function TeamPage({ params }: Params) {
       (m.awayTeam.id === teamId && m.score.winner === "AWAY_TEAM")
   ).length;
   const draws = finished.filter((m) => m.score.winner === "DRAW").length;
-  const losses = finished.length - wins - draws;
   const goalsFor = finished.reduce((acc, m) => {
     const s = m.score.fullTime;
     return acc + (m.homeTeam.id === teamId ? (s.home ?? 0) : (s.away ?? 0));
@@ -78,7 +75,6 @@ export default async function TeamPage({ params }: Params) {
 
   return (
     <div className="space-y-8">
-      {/* Header */}
       <div className="flex items-center gap-5">
         {team.crest && (
           <Image src={team.crest} alt={team.name} width={80} height={80} className="object-contain" unoptimized />
@@ -89,24 +85,19 @@ export default async function TeamPage({ params }: Params) {
             {team.clubColors && <span>{team.clubColors} · </span>}
             {team.venue && <span>{team.venue}</span>}
           </p>
-          {team.founded && (
-            <p className="text-xs text-gray-600 mt-0.5">Est. {team.founded}</p>
-          )}
+          {team.founded && <p className="text-xs text-gray-600 mt-0.5">{t("founded")} {team.founded}</p>}
         </div>
       </div>
 
-      {/* WC stats */}
       {finished.length > 0 && (
         <div>
-          <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">
-            World Cup 2026 Stats
-          </h2>
+          <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">{t("wcStats")}</h2>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
-              { label: "Played", value: finished.length },
-              { label: "Wins", value: wins },
-              { label: "Draws", value: draws },
-              { label: "Goals For", value: goalsFor },
+              { label: t("played"), value: finished.length },
+              { label: t("wins"), value: wins },
+              { label: t("draws"), value: draws },
+              { label: t("goalsFor"), value: goalsFor },
             ].map(({ label, value }) => (
               <div key={label} className="bg-white/5 rounded-xl p-4 border border-white/10">
                 <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">{label}</p>
@@ -117,24 +108,18 @@ export default async function TeamPage({ params }: Params) {
         </div>
       )}
 
-      {/* Matches */}
       {matches.length > 0 && (
         <div>
-          <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">
-            Matches
-          </h2>
+          <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">{t("matches")}</h2>
           <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-1">
-            {matches.map((m) => (
-              <MatchRow key={m.id} match={m} teamId={teamId} />
-            ))}
+            {matches.map((m) => <MatchRow key={m.id} match={m} teamId={teamId} />)}
           </div>
         </div>
       )}
 
-      {/* Squad */}
       {team.squad && team.squad.length > 0 && (
         <div>
-          <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">Squad</h2>
+          <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">{t("squad")}</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {team.squad.map((p) => (
               <div key={p.id} className="bg-white/5 rounded-lg px-3 py-2 border border-white/10">

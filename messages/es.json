@@ -1,0 +1,56 @@
+{
+  "nav": {
+    "matches": "Partidos",
+    "standings": "Clasificación"
+  },
+  "games": {
+    "title": "Partidos del Mundial 2026",
+    "today": "Hoy",
+    "beebotHint": "BeeBot experto en fútbol — pregúntale lo que quieras",
+    "noMatches": "No hay partidos hoy",
+    "noMatchesSub": "Vuelve mañana o pregúntale a BeeBot sobre los próximos partidos."
+  },
+  "countdown": {
+    "warmingUp": "La Colmena está calentando",
+    "soon": "No hay partidos hoy — pero el Mundial ya casi llega",
+    "openingMatch": "Partido inaugural",
+    "days": "Días",
+    "hours": "Horas",
+    "mins": "Mins",
+    "secs": "Segs",
+    "started": "¡Es la hora! 🎉",
+    "startedSub": "El Mundial está en marcha — vuelve pronto para los partidos de hoy.",
+    "beebotHint": "Pregúntale a BeeBot sobre grupos, equipos o predicciones mientras esperas"
+  },
+  "standings": {
+    "title": "Clasificación de Grupos",
+    "subtitle": "Mundial 2026 — los 2 primeros de cada grupo avanzan",
+    "noStandings": "Sin clasificación aún",
+    "noStandingsSub": "La fase de grupos puede no haber comenzado. Pregúntale a BeeBot.",
+    "advance": "top 2 avanzan",
+    "cols": {
+      "team": "Equipo",
+      "form": "Forma"
+    }
+  },
+  "team": {
+    "wcStats": "Estadísticas del Mundial 2026",
+    "played": "Jugados",
+    "wins": "Victorias",
+    "draws": "Empates",
+    "goalsFor": "Goles a favor",
+    "matches": "Partidos",
+    "squad": "Plantilla",
+    "founded": "Fund."
+  },
+  "chat": {
+    "intro": "¡Buzz buzz! Soy BeeBot 🐝 — pregúntame lo que quieras del Mundial. Partidos, clasificaciones, predicciones.",
+    "placeholder": "Pregúntale a BeeBot...",
+    "poweredBy": "Powered by Claude · Datos en vivo del Mundial",
+    "p1": "¿Quién juega hoy?",
+    "p2": "Muéstrame el Grupo A",
+    "p3": "¿Qué equipo ha marcado más goles?",
+    "p4": "Predice los cuartos de final",
+    "error": "Bzzt — algo salió mal. ¡Inténtalo de nuevo! 🐝"
+  }
+}

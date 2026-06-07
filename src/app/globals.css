@@ -1,6 +1,9 @@
 @import "tailwindcss";
 
 @theme {
+  /* Custom breakpoint */
+  --breakpoint-xs: 480px;
+
   /* Brand colors */
   --color-bee-yellow: #F5C400;
   --color-bee-black: #1A1A1A;
