@@ -1,7 +1,8 @@
 {
   "nav": {
     "matches": "Partidos",
-    "standings": "Clasificación"
+    "standings": "Clasificación",
+    "bracket": "Cuadro"
   },
   "games": {
     "title": "Partidos del Mundial 2026",
@@ -32,6 +33,31 @@
       "team": "Equipo",
       "form": "Forma"
     }
+  },
+  "bracket": {
+    "title": "Cuadro Eliminatorio",
+    "subtitle": "Mundial 2026 — El camino a la Final",
+    "coming": "Fase eliminatoria próximamente",
+    "comingSub": "La fase de grupos aún está en curso. Vuelve cuando se definan los clasificados de cada grupo.",
+    "last32": "Octavos de Final",
+    "last16": "Dieciseisavos de Final",
+    "qf": "Cuartos de Final",
+    "sf": "Semifinales",
+    "third": "Tercer Puesto",
+    "final": "Final",
+    "tbd": "Por def.",
+    "match": "partido",
+    "matches": "partidos"
+  },
+  "browser": {
+    "byDate": "Por fecha",
+    "byGroup": "Por grupo",
+    "live": "En vivo — actualizando cada 60 s",
+    "loading": "Cargando…",
+    "noMatches": "No hay partidos este día.",
+    "noMatchesSub": "Prueba otra fecha en la barra superior.",
+    "group": "Grupo",
+    "error": "No se pudo cargar el calendario de partidos."
   },
   "team": {
     "wcStats": "Estadísticas del Mundial 2026",

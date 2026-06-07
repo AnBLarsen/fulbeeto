@@ -1,7 +1,8 @@
 {
   "nav": {
     "matches": "Matches",
-    "standings": "Standings"
+    "standings": "Standings",
+    "bracket": "Bracket"
   },
   "games": {
     "title": "World Cup Matches 2026",
@@ -32,6 +33,31 @@
       "team": "Team",
       "form": "Form"
     }
+  },
+  "bracket": {
+    "title": "Knockout Bracket",
+    "subtitle": "World Cup 2026 — Road to the Final",
+    "coming": "Knockout stage coming soon",
+    "comingSub": "The group stage is still underway. Check back once the top teams from each group are decided.",
+    "last32": "Round of 32",
+    "last16": "Round of 16",
+    "qf": "Quarter-finals",
+    "sf": "Semi-finals",
+    "third": "Third Place",
+    "final": "Final",
+    "tbd": "TBD",
+    "match": "match",
+    "matches": "matches"
+  },
+  "browser": {
+    "byDate": "By Date",
+    "byGroup": "By Group",
+    "live": "Live — refreshing every 60 s",
+    "loading": "Loading…",
+    "noMatches": "No matches scheduled for this day.",
+    "noMatchesSub": "Try another date on the strip above.",
+    "group": "Group",
+    "error": "Could not load the match schedule."
   },
   "team": {
     "wcStats": "World Cup 2026 Stats",

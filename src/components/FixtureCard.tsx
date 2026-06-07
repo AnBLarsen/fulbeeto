@@ -1,9 +1,20 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 import type { FDMatch } from "@/types/football";
 
 interface FixtureCardProps {
   match: FDMatch;
+}
+
+/** Short timezone abbreviation for the user's local zone, e.g. "EDT", "CEST", "GMT+8" */
+function localTz(): string {
+  return (
+    new Intl.DateTimeFormat(undefined, { timeZoneName: "short" })
+      .formatToParts(new Date())
+      .find((p) => p.type === "timeZoneName")?.value ?? "local"
+  );
 }
 
 function StatusBadge({ match }: { match: FDMatch }) {
@@ -31,21 +42,21 @@ function StatusBadge({ match }: { match: FDMatch }) {
   );
 }
 
-function TeamCrest({ crest, name, size = 40 }: { crest: string; name: string; size?: number }) {
+function TeamCrest({ crest, name, size = 40 }: { crest: string | null; name: string | null; size?: number }) {
   if (!crest) {
     return (
       <div
         className="rounded-full bg-gray-700 flex items-center justify-center text-xs text-gray-400 font-bold"
         style={{ width: size, height: size }}
       >
-        {name.slice(0, 2).toUpperCase()}
+        {name ? name.slice(0, 2).toUpperCase() : "?"}
       </div>
     );
   }
   return (
     <Image
       src={crest}
-      alt={name}
+      alt={name ?? "TBD"}
       width={size}
       height={size}
       style={{ width: size, height: size }}
@@ -57,9 +68,10 @@ function TeamCrest({ crest, name, size = 40 }: { crest: string; name: string; si
 
 export function FixtureCard({ match }: FixtureCardProps) {
   const { homeTeam, awayTeam, score, group, stage } = match;
-  const isLive = match.status === "IN_PLAY" || match.status === "PAUSED";
-  const hasScore = score.fullTime.home !== null && score.fullTime.away !== null;
-  const label = group
+  const isLive    = match.status === "IN_PLAY" || match.status === "PAUSED";
+  const isScheduled = match.status === "SCHEDULED" || match.status === "TIMED";
+  const hasScore  = score.fullTime.home !== null && score.fullTime.away !== null;
+  const label     = group
     ? group.replace("_", " ")
     : stage.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
 
@@ -82,11 +94,13 @@ export function FixtureCard({ match }: FixtureCardProps) {
       <div className="flex items-center justify-between gap-4">
         {/* Home */}
         <Link
-          href={`/teams/${homeTeam.id}`}
+          href={homeTeam.id ? `/teams/${homeTeam.id}` : "#"}
           className="flex flex-col items-center gap-1.5 flex-1 hover:opacity-80 transition-opacity"
         >
           <TeamCrest crest={homeTeam.crest} name={homeTeam.name} size={40} />
-          <span className="text-sm font-semibold text-center leading-tight">{homeTeam.shortName}</span>
+          <span className="text-sm font-semibold text-center leading-tight">
+            {homeTeam.shortName ?? "TBD"}
+          </span>
           {homeWon && <span className="text-[10px] text-bee-yellow">▲ Winner</span>}
         </Link>
 
@@ -107,20 +121,26 @@ export function FixtureCard({ match }: FixtureCardProps) {
               {new Date(match.utcDate).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
             </div>
           )}
+
+          {/* Timezone — shown for scheduled matches; AET/Pen for finished */}
           <span className="text-[10px] text-gray-600">
-            {score.duration !== "REGULAR" && match.status === "FINISHED"
+            {match.status === "FINISHED" && score.duration !== "REGULAR"
               ? score.duration === "PENALTY_SHOOTOUT" ? "Pen" : "AET"
+              : isScheduled
+              ? localTz()
               : ""}
           </span>
         </div>
 
         {/* Away */}
         <Link
-          href={`/teams/${awayTeam.id}`}
+          href={awayTeam.id ? `/teams/${awayTeam.id}` : "#"}
           className="flex flex-col items-center gap-1.5 flex-1 hover:opacity-80 transition-opacity"
         >
           <TeamCrest crest={awayTeam.crest} name={awayTeam.name} size={40} />
-          <span className="text-sm font-semibold text-center leading-tight">{awayTeam.shortName}</span>
+          <span className="text-sm font-semibold text-center leading-tight">
+            {awayTeam.shortName ?? "TBD"}
+          </span>
           {awayWon && <span className="text-[10px] text-bee-yellow">▲ Winner</span>}
         </Link>
       </div>

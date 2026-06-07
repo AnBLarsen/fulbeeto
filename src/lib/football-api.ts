@@ -101,6 +101,41 @@ export async function getTeamDetail(teamId: number): Promise<FDTeamDetail | null
   }
 }
 
+// Stages football-data.org uses for WC knockout rounds (handle both naming conventions)
+export const KNOCKOUT_STAGES = new Set([
+  "LAST_32", "ROUND_OF_32",
+  "LAST_16", "ROUND_OF_16",
+  "QUARTER_FINALS",
+  "SEMI_FINALS",
+  "THIRD_PLACE",
+  "FINAL",
+]);
+
+// Canonical stage key (normalise LAST_32 → ROUND_OF_32, etc.)
+export function normaliseStage(stage: string): string {
+  if (stage === "LAST_32") return "ROUND_OF_32";
+  if (stage === "LAST_16") return "ROUND_OF_16";
+  return stage;
+}
+
+/** Every match in the tournament — no date filter, let the API return all */
+export async function getAllMatches(): Promise<FDMatch[]> {
+  const data = await apiFetch<FDMatchesResponse>(
+    `/competitions/${COMPETITION}/matches`
+  );
+  return data.matches;
+}
+
+/** All knockout-round matches for the tournament */
+export async function getKnockoutMatches(): Promise<FDMatch[]> {
+  const data = await apiFetch<FDMatchesResponse>(
+    `/competitions/${COMPETITION}/matches`
+  );
+  return data.matches
+    .filter((m) => KNOCKOUT_STAGES.has(m.stage))
+    .sort((a, b) => new Date(a.utcDate).getTime() - new Date(b.utcDate).getTime());
+}
+
 /** Team's World Cup matches */
 export async function getTeamMatches(teamId: number): Promise<FDMatch[]> {
   const data = await apiFetch<FDMatchesResponse>(

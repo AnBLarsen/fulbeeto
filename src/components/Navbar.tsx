@@ -9,6 +9,7 @@ import { useState } from "react";
 const navLinks = [
   { href: "/", key: "matches" },
   { href: "/standings", key: "standings" },
+  { href: "/bracket", key: "bracket" },
 ] as const;
 
 export function Navbar() {
