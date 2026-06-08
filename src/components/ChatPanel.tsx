@@ -15,14 +15,26 @@ function MessageBubble({ message }: { message: ChatMessage }) {
           <Image src="/bee.png" alt="BeeBot" width={24} height={24} loading="lazy" />
         </div>
       )}
-      <div
-        className={`max-w-[80%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
-          isUser
-            ? "bg-bee-yellow text-bee-black font-medium rounded-tr-sm"
-            : "bg-white/10 text-gray-100 rounded-tl-sm"
-        }`}
-      >
-        {message.content}
+      <div className={`flex flex-col gap-1.5 ${isUser ? "" : "max-w-[85%]"}`}>
+        {/* Thinking block — greyed out, separate from the answer */}
+        {message.thinking && (
+          <div className="text-[11px] text-gray-500 bg-white/5 rounded-xl rounded-tl-sm px-3 py-2 italic leading-relaxed whitespace-pre-wrap">
+            <span className="not-italic text-gray-600 font-medium">🔍 </span>
+            {message.thinking}
+          </div>
+        )}
+        {/* Answer bubble */}
+        {(message.content || isUser) && (
+          <div
+            className={`rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${
+              isUser
+                ? "bg-bee-yellow text-bee-black font-medium rounded-tr-sm max-w-[80vw] sm:max-w-xs"
+                : "bg-white/10 text-gray-100 rounded-tl-sm"
+            }`}
+          >
+            {message.content}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -81,9 +93,43 @@ export function ChatPanel() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages: updated }),
       });
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      setMessages([...updated, { role: "assistant", content: data.reply }]);
+
+      // Non-2xx responses are JSON (rate limit, validation errors, etc.)
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error ?? "Request failed");
+      }
+
+      // Read the stream. The server sends optional thinking text followed by \x01,
+      // then the streamed final answer. Split on \x01 to render them separately.
+      const reader = res.body!.getReader();
+      const decoder = new TextDecoder();
+      let fullText = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        if (!chunk) continue;
+
+        fullText += chunk;
+
+        const sepIdx = fullText.indexOf("\x01");
+        const thinking = sepIdx >= 0 ? fullText.slice(0, sepIdx) : undefined;
+        const answer   = sepIdx >= 0 ? fullText.slice(sepIdx + 1) : fullText;
+
+        setMessages([...updated, {
+          role: "assistant",
+          content: answer,
+          thinking: thinking || undefined,
+        }]);
+      }
+
+      const sepIdx = fullText.indexOf("\x01");
+      const finalAnswer = sepIdx >= 0 ? fullText.slice(sepIdx + 1) : fullText;
+      if (!finalAnswer.trim()) {
+        setMessages([...updated, { role: "assistant", content: t("error") }]);
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "";
       const isTooLong = msg.includes("too long") || msg.includes("demasiado");
@@ -156,7 +202,7 @@ export function ChatPanel() {
               <MessageBubble key={i} message={msg} />
             ))}
 
-            {loading && <TypingIndicator />}
+            {loading && messages[messages.length - 1]?.role !== "assistant" && <TypingIndicator />}
             <div ref={bottomRef} />
           </div>
 

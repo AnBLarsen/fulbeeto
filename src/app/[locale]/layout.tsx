@@ -6,6 +6,7 @@ import { routing } from "@/i18n/routing";
 import "../globals.css";
 import { Navbar } from "@/components/Navbar";
 import { ChatPanel } from "@/components/ChatPanel";
+import { Analytics } from '@vercel/analytics/next';
 
 export const metadata: Metadata = {
   title: "FulBee.TO | AI powered World Cup companion",
@@ -38,6 +39,7 @@ export default async function LocaleLayout({
       <body className="min-h-screen bg-bee-black antialiased">
         <NextIntlClientProvider messages={messages}>
           <Navbar />
+          <Analytics/>
           <main className="mx-auto max-w-5xl px-4 py-6">{children}</main>
           <ChatPanel />
         </NextIntlClientProvider>

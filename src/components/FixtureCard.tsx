@@ -33,11 +33,11 @@ function StatusBadge({ match }: { match: FDMatch }) {
   if (status === "POSTPONED" || status === "CANCELLED" || status === "SUSPENDED") {
     return <span className="text-xs text-red-400 font-medium">{status}</span>;
   }
-  // SCHEDULED or TIMED
+  // SCHEDULED or TIMED — show the date since the time is already in the center
   const kickoff = new Date(match.utcDate);
   return (
     <span className="text-xs text-gray-500">
-      {kickoff.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+      {kickoff.toLocaleDateString([], { month: "short", day: "numeric" })}
     </span>
   );
 }

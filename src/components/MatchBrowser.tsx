@@ -37,9 +37,14 @@ function dateRange(start: string, end: string): string[] {
   return dates;
 }
 
-/** UTC date portion of a match's utcDate string */
+/** Local date of a match, converted from its UTC timestamp */
 function matchDate(m: FDMatch): string {
-  return m.utcDate.slice(0, 10);
+  const d = new Date(m.utcDate);
+  return [
+    d.getFullYear(),
+    String(d.getMonth() + 1).padStart(2, "0"),
+    String(d.getDate()).padStart(2, "0"),
+  ].join("-");
 }
 
 /** Sorted unique group names from a match list */

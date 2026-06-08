@@ -89,4 +89,5 @@ export interface FDMatchesResponse {
 export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
+  thinking?: string; // reasoning text from tool-use turns, shown separately
 }

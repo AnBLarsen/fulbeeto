@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { AGENT_TOOLS, SYSTEM_PROMPT } from "@/lib/agent-tools";
-import { getFixtures, getStandings, getTeamMatches, getMatchResult } from "@/lib/football-api";
+import { getFixtures, getStandings, getTeamMatches, getMatchResult, getTeamDetail } from "@/lib/football-api";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import type { ChatMessage } from "@/types/football";
 
@@ -39,6 +39,12 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
         const match = await getMatchResult(input.matchId as number);
         if (!match) return `No match found for ID ${input.matchId}.`;
         return JSON.stringify(match, null, 2);
+      }
+      case "get_squad": {
+        const team = await getTeamDetail(input.teamId as number);
+        if (!team) return `Squad data unavailable for team ID ${input.teamId}. Do NOT guess — tell the user you could not retrieve the squad.`;
+        if (!team.squad?.length) return `Squad data unavailable for ${input.teamName ?? team.name}. The API may not provide roster data at this subscription tier. Do NOT guess — tell the user you could not retrieve the squad.`;
+        return JSON.stringify({ team: team.name, coach: team.coach, squad: team.squad }, null, 2);
       }
       default:
         return `Unknown tool: ${name}`;
@@ -107,63 +113,103 @@ export async function POST(req: NextRequest) {
   // 5. Trim history to prevent context bloat
   const trimmed = messages.slice(-MAX_HISTORY_MESSAGES);
 
-  // 6. Agentic loop
-  try {
-    const anthropicMessages: Anthropic.MessageParam[] = trimmed.map((m) => ({
-      role: m.role,
-      content: m.content,
-    }));
+  // 6. Two-phase agentic loop:
+  //    Phase 1 — non-streaming tool calls (collect thinking text)
+  //    Phase 2 — stream the final answer, preceded by \x01 separator if there was thinking
+  const encoder = new TextEncoder();
 
-    let response = await client.messages.create({
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 1024,
-      system: SYSTEM_PROMPT,
-      tools: AGENT_TOOLS,
-      messages: anthropicMessages,
-    });
+  const readable = new ReadableStream({
+    async start(controller) {
+      try {
+        const currentMessages: Anthropic.MessageParam[] = trimmed.map((m) => ({
+          role: m.role,
+          content: m.content,
+        }));
 
-    while (response.stop_reason === "tool_use") {
-      const toolUseBlocks = response.content.filter(
-        (b): b is Anthropic.ToolUseBlock => b.type === "tool_use"
-      );
+        // ── Phase 1: tool-use loop (non-streaming) ────────────────────────────
+        let thinkingText = "";
 
-      const toolResults = await Promise.all(
-        toolUseBlocks.map(async (block) => ({
-          type: "tool_result" as const,
-          tool_use_id: block.id,
-          content: await executeTool(block.name, block.input as Record<string, unknown>),
-        }))
-      );
+        let response = await client.messages.create({
+          model: "claude-haiku-4-5-20251001",
+          max_tokens: 1024,
+          system: SYSTEM_PROMPT,
+          tools: AGENT_TOOLS,
+          messages: currentMessages,
+        });
 
-      anthropicMessages.push({ role: "assistant", content: response.content });
-      anthropicMessages.push({ role: "user", content: toolResults });
+        while (response.stop_reason === "tool_use") {
+          // Collect any reasoning text Claude generated before the tool call
+          const text = response.content
+            .filter((b): b is Anthropic.TextBlock => b.type === "text")
+            .map((b) => b.text)
+            .join("");
+          if (text.trim()) {
+            thinkingText += (thinkingText ? "\n\n" : "") + text.trim();
+          }
 
-      response = await client.messages.create({
-        model: "claude-haiku-4-5-20251001",
-        max_tokens: 1024,
-        system: SYSTEM_PROMPT,
-        tools: AGENT_TOOLS,
-        messages: anthropicMessages,
-      });
-    }
+          // Execute tools
+          const toolUseBlocks = response.content.filter(
+            (b): b is Anthropic.ToolUseBlock => b.type === "tool_use"
+          );
+          const toolResults = await Promise.all(
+            toolUseBlocks.map(async (block) => ({
+              type: "tool_result" as const,
+              tool_use_id: block.id,
+              content: await executeTool(block.name, block.input as Record<string, unknown>),
+            }))
+          );
+          currentMessages.push({ role: "assistant", content: response.content });
+          currentMessages.push({ role: "user", content: toolResults });
 
-    const textBlock = response.content.find(
-      (b): b is Anthropic.TextBlock => b.type === "text"
-    );
+          response = await client.messages.create({
+            model: "claude-haiku-4-5-20251001",
+            max_tokens: 1024,
+            system: SYSTEM_PROMPT,
+            tools: AGENT_TOOLS,
+            messages: currentMessages,
+          });
+        }
 
-    return NextResponse.json(
-      { reply: textBlock?.text ?? "I couldn't generate a response." },
-      {
-        headers: {
-          "X-RateLimit-Limit": String(RATE_LIMIT.limit),
-          "X-RateLimit-Remaining": String(rate.remaining),
-          "X-RateLimit-Reset": String(Math.ceil(rate.resetAt / 1000)),
-        },
+        // ── Phase 2: send thinking block + stream final answer ─────────────────
+        // \x01 is the separator: everything before = thinking, after = answer
+        if (thinkingText) {
+          controller.enqueue(encoder.encode(thinkingText + "\x01"));
+        }
+
+        const finalStream = client.messages.stream({
+          model: "claude-haiku-4-5-20251001",
+          max_tokens: 1024,
+          system: SYSTEM_PROMPT,
+          tools: AGENT_TOOLS,
+          messages: currentMessages,
+        });
+
+        for await (const event of finalStream) {
+          if (
+            event.type === "content_block_delta" &&
+            event.delta.type === "text_delta"
+          ) {
+            controller.enqueue(encoder.encode(event.delta.text));
+          }
+        }
+
+        controller.close();
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Unknown error";
+        console.error("[Agent API]", message);
+        controller.error(err);
       }
-    );
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    console.error("[Agent API]", message);
-    return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
-  }
+    },
+  });
+
+  return new Response(readable, {
+    headers: {
+      "Content-Type": "text/plain; charset=utf-8",
+      "X-Accel-Buffering": "no", // prevent Vercel/nginx from buffering the stream
+      "Cache-Control": "no-cache",
+      "X-RateLimit-Limit": String(RATE_LIMIT.limit),
+      "X-RateLimit-Remaining": String(rate.remaining),
+      "X-RateLimit-Reset": String(Math.ceil(rate.resetAt / 1000)),
+    },
+  });
 }
