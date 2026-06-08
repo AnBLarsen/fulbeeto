@@ -90,6 +90,7 @@ export function MatchBrowser({ initialDate }: MatchBrowserProps) {
 
   const [allMatches, setAllMatches]       = useState<FDMatch[] | null>(null);
   const [error, setError]                 = useState<string | null>(null);
+  const [retryCount, setRetryCount]       = useState(0);
   const [mode, setMode]                   = useState<ViewMode>("date");
   const [selectedDate, setSelectedDate]   = useState<string>(initialDate ?? todayLocal());
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
@@ -98,6 +99,8 @@ export function MatchBrowser({ initialDate }: MatchBrowserProps) {
   // ── Fetch all tournament matches once ──────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
+    setAllMatches(null);
+    setError(null);
     fetch("/api/matches", { cache: "no-store" })
       .then((r) => {
         if (!r.ok) throw new Error();
@@ -105,6 +108,8 @@ export function MatchBrowser({ initialDate }: MatchBrowserProps) {
       })
       .then((data) => {
         if (cancelled) return;
+        // If API returned empty, treat it as an error so user can retry
+        if (!data.length) throw new Error("empty");
         setAllMatches(data);
 
         // Default group selection
@@ -136,7 +141,7 @@ export function MatchBrowser({ initialDate }: MatchBrowserProps) {
         if (!cancelled) setError(t("error"));
       });
     return () => { cancelled = true; };
-  }, []);
+  }, [retryCount]);
 
   // ── Auto-refresh every 60 s while any match is live ───────────────────────
   useEffect(() => {
@@ -279,8 +284,14 @@ export function MatchBrowser({ initialDate }: MatchBrowserProps) {
           {t("loading")}
         </div>
       ) : error ? (
-        <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
-          {error}
+        <div className="flex flex-col items-center gap-3 py-14">
+          <p className="text-gray-500 text-sm">{t("error")}</p>
+          <button
+            onClick={() => setRetryCount((n) => n + 1)}
+            className="px-4 py-2 rounded-xl bg-bee-yellow text-bee-black text-xs font-bold hover:bg-yellow-400 transition-colors"
+          >
+            ↺ Retry
+          </button>
         </div>
       ) : displayMatches.length === 0 ? (
         <div className="text-center py-14">
