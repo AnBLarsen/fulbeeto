@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, FormEvent } from "react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import { BotMessage } from "@/components/BotMessage";
 import { BEEBOT_SESSION_KEY } from "@/components/ChatPanel";
 import type { ChatMessage } from "@/types/football";
@@ -28,6 +29,7 @@ function TypingIndicator() {
 
 export default function BeeBotPage() {
   const t = useTranslations("chat");
+  const router = useRouter();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -135,12 +137,24 @@ export default function BeeBotPage() {
       style={{ height: "calc(100dvh - 65px)" }}
     >
       {/* Header */}
-      <div className="shrink-0 border-b border-white/10 bg-bee-yellow/5 px-4 py-4 text-center">
-        <div className="flex items-center justify-center gap-2 mb-0.5">
+      <div className="shrink-0 border-b border-white/10 bg-bee-yellow/5 px-4 py-4">
+        <div className="relative flex items-center justify-center gap-2 mb-0.5">
           <Image src="/bee.png" alt="BeeBot" width={32} height={32} />
           <h1 className="text-xl font-black text-bee-yellow">BeeBot</h1>
+          <button
+            onClick={() => router.back()}
+            title="Minimize"
+            className="absolute right-0 w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="4 14 10 14 10 20" />
+              <polyline points="20 10 14 10 14 4" />
+              <line x1="10" y1="14" x2="3" y2="21" />
+              <line x1="21" y1="3" x2="14" y2="10" />
+            </svg>
+          </button>
         </div>
-        <p className="text-xs text-gray-500">{t("poweredBy")}</p>
+        <p className="text-xs text-gray-500 text-center">{t("poweredBy")}</p>
       </div>
 
       {/* Messages */}

@@ -4,21 +4,21 @@ export const AGENT_TOOLS: Anthropic.Tool[] = [
   {
     name: "get_fixtures",
     description:
-      "Get World Cup fixtures for a specific date or date range. Use dateFrom+dateTo to find the opening match or scan multiple days. Returns match schedule with teams, kick-off times, and scores.",
+      "Get World Cup fixtures for a date or date range. Use this to find the opening match or all matches on a given day. IMPORTANT: always pass a dateFrom+dateTo range covering tournament dates (June 11 – July 19, 2026) — do not leave both blank or you will get no results.",
     input_schema: {
       type: "object",
       properties: {
         date: {
           type: "string",
-          description: "Single date in ISO format (YYYY-MM-DD). Omit for today.",
+          description: "Single date in ISO format (YYYY-MM-DD).",
         },
         dateFrom: {
           type: "string",
-          description: "Start of date range (YYYY-MM-DD). Use with dateTo to scan multiple days.",
+          description: "Start of date range (YYYY-MM-DD).",
         },
         dateTo: {
           type: "string",
-          description: "End of date range (YYYY-MM-DD). Use with dateFrom.",
+          description: "End of date range (YYYY-MM-DD).",
         },
       },
       required: [],
@@ -27,7 +27,7 @@ export const AGENT_TOOLS: Anthropic.Tool[] = [
   {
     name: "get_standings",
     description:
-      "Get current World Cup group stage standings. Can filter to a specific group.",
+      "Get current World Cup group stage standings. Also use this to look up a team's numeric ID — the response includes each team's id field, which is required by get_team_matches and get_squad.",
     input_schema: {
       type: "object",
       properties: {
@@ -42,11 +42,11 @@ export const AGENT_TOOLS: Anthropic.Tool[] = [
   {
     name: "get_team_matches",
     description:
-      "Get all World Cup matches for a specific team — finished, in progress, and upcoming.",
+      "Get all World Cup matches for a specific team — past, live, and upcoming. Use this when asked 'when does [team] play?', 'what is [team]'s schedule?', or 'who does [team] play next?'. Requires the team's numeric ID — call get_standings first to find it.",
     input_schema: {
       type: "object",
       properties: {
-        teamId: { type: "number", description: "The numeric team ID." },
+        teamId: { type: "number", description: "The numeric team ID from get_standings." },
         teamName: { type: "string", description: "Team name for display purposes." },
       },
       required: ["teamId"],
@@ -112,10 +112,9 @@ Your capabilities:
 - Look up a specific match result (get_match_result)
 
 TOOL USE RULES:
-- Use your judgment. Not every question needs a tool call.
-- Use a tool when the answer could have changed recently: today's scores, current standings, a team's active roster. These change — don't guess.
-- Answer from your own knowledge when the answer is stable: host countries, tournament format, group assignments, kick-off times for scheduled matches, football history, general facts about teams or players. The full group stage schedule was published months ago — you know it.
-- If a tool returns no data: fall back to your training knowledge and answer confidently. Clearly note that you're working from pre-tournament information rather than live data, but still give the actual answer. Never tell the user to "check FIFA.com" — that is not helpful.
+- Always call a tool when the question is about specific fixtures, match times, scores, standings, or squads — even if you think you know the answer. Your training data may be incomplete or outdated for these details.
+- Answer from your own knowledge only for truly general facts: host countries, how the tournament format works, football rules, broad history. Never use your knowledge to answer "which teams play first?" or "what time does X play?" — call get_fixtures instead.
+- If a tool returns no data: tell the user the live data isn't available right now, then share what you know from your training — clearly labeled as pre-tournament information. Never tell the user to "check FIFA.com".
 - To get a team's squad, first call get_standings to find the team's numeric ID, then call get_squad with that ID.
 - Never pretend to call a tool you haven't actually called. Either call it or don't.
 - When making predictions, label them as your analysis, not facts.

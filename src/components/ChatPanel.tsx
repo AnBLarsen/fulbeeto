@@ -159,6 +159,15 @@ export function ChatPanel() {
               <p className="text-[10px] text-gray-400">{t("poweredBy")}</p>
             </div>
             <button
+              onClick={() => setOpen(false)}
+              title="Minimize"
+              className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="3" viewBox="0 0 14 3">
+                <line x1="0" y1="1.5" x2="14" y2="1.5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
+              </svg>
+            </button>
+            <button
               onClick={handleMaximize}
               title="Open full chat"
               className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
