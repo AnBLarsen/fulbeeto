@@ -111,13 +111,26 @@ export function MatchBrowser({ initialDate }: MatchBrowserProps) {
         const groups = deriveGroups(data);
         if (groups.length) setSelectedGroup((p) => p ?? groups[0]);
 
-        // If initialDate isn't in the tournament range, snap to first match day
-        const dates = data.map(matchDate).sort();
-        const first = dates[0];
-        const last  = dates[dates.length - 1];
+        // Snap selected date to a day that actually has matches
+        const matchDays = new Set(data.map(matchDate));
+        const sorted = [...matchDays].sort();
+        const first = sorted[0];
+        const last  = sorted[sorted.length - 1];
         const today = todayLocal();
-        if (today < first) setSelectedDate(first);
-        else if (today > last) setSelectedDate(last);
+
+        if (!matchDays.has(today)) {
+          if (today < first) {
+            // Before tournament: go to first match day
+            setSelectedDate(first);
+          } else if (today > last) {
+            // After tournament: go to last match day
+            setSelectedDate(last);
+          } else {
+            // Rest day during tournament: go to next upcoming match day
+            const next = sorted.find((d) => d > today);
+            setSelectedDate(next ?? last);
+          }
+        }
       })
       .catch(() => {
         if (!cancelled) setError(t("error"));

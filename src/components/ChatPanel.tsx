@@ -3,48 +3,20 @@
 import { useState, useRef, useEffect, FormEvent } from "react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
+import { usePathname, useRouter } from "next/navigation";
+import { useLocale } from "next-intl";
 import { OPEN_CHAT_EVENT } from "@/lib/chat-events";
+import { BotMessage } from "@/components/BotMessage";
 import type { ChatMessage } from "@/types/football";
 
-function MessageBubble({ message }: { message: ChatMessage }) {
-  const isUser = message.role === "user";
-  return (
-    <div className={`flex gap-2 ${isUser ? "flex-row-reverse" : "flex-row"}`}>
-      {!isUser && (
-        <div className="shrink-0 mt-1">
-          <Image src="/bee.png" alt="BeeBot" width={24} height={24} loading="lazy" />
-        </div>
-      )}
-      <div className={`flex flex-col gap-1.5 ${isUser ? "" : "max-w-[85%]"}`}>
-        {/* Thinking block — greyed out, separate from the answer */}
-        {message.thinking && (
-          <div className="text-[11px] text-gray-500 bg-white/5 rounded-xl rounded-tl-sm px-3 py-2 italic leading-relaxed whitespace-pre-wrap">
-            <span className="not-italic text-gray-600 font-medium">🔍 </span>
-            {message.thinking}
-          </div>
-        )}
-        {/* Answer bubble */}
-        {(message.content || isUser) && (
-          <div
-            className={`rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${
-              isUser
-                ? "bg-bee-yellow text-bee-black font-medium rounded-tr-sm max-w-[80vw] sm:max-w-xs"
-                : "bg-white/10 text-gray-100 rounded-tl-sm"
-            }`}
-          >
-            {message.content}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
+export const BEEBOT_SESSION_KEY = "beebot_messages";
+
 
 function TypingIndicator() {
   return (
     <div className="flex gap-2">
       <div className="shrink-0 mt-1">
-        <Image src="/ball.png" alt="Soccer ball" width={24} height={24} className="animate-float" />
+        <Image src="/ball.png" alt="Soccer ball" width={24} height={24} className="animate-bounce" />
       </div>
       <div className="bg-white/10 rounded-2xl rounded-tl-sm px-3.5 py-3 flex gap-1 items-center">
         {[0, 1, 2].map((i) => (
@@ -61,6 +33,9 @@ function TypingIndicator() {
 
 export function ChatPanel() {
   const t = useTranslations("chat");
+  const pathname = usePathname();
+  const router = useRouter();
+  const locale = useLocale();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -78,6 +53,9 @@ export function ChatPanel() {
     window.addEventListener(OPEN_CHAT_EVENT, handler);
     return () => window.removeEventListener(OPEN_CHAT_EVENT, handler);
   }, []);
+
+  // Don't render the floating widget on the dedicated BeeBot page
+  if (pathname.includes("/beebot")) return null;
 
   async function sendMessage(text: string) {
     if (!text.trim() || loading) return;
@@ -151,6 +129,13 @@ export function ChatPanel() {
     sendMessage(input);
   }
 
+  function handleMaximize() {
+    if (messages.length > 0) {
+      sessionStorage.setItem(BEEBOT_SESSION_KEY, JSON.stringify(messages));
+    }
+    router.push(`/${locale}/beebot`);
+  }
+
   return (
     <>
       <button
@@ -169,10 +154,22 @@ export function ChatPanel() {
         <div className="fixed bottom-20 right-3 left-3 sm:left-auto sm:right-6 sm:w-96 h-[480px] sm:h-[500px] flex flex-col rounded-2xl border border-bee-yellow/30 bg-bee-black shadow-2xl overflow-hidden z-50">
           <div className="flex items-center gap-3 px-4 py-3 border-b border-white/10 bg-bee-yellow/10">
             <Image src="/bee.png" alt="BeeBot" width={28} height={28} loading="lazy" />
-            <div>
+            <div className="flex-1">
               <p className="font-bold text-bee-yellow text-sm">BeeBot</p>
               <p className="text-[10px] text-gray-400">{t("poweredBy")}</p>
             </div>
+            <button
+              onClick={handleMaximize}
+              title="Open full chat"
+              className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="15 3 21 3 21 9" />
+                <polyline points="9 21 3 21 3 15" />
+                <line x1="21" y1="3" x2="14" y2="10" />
+                <line x1="3" y1="21" x2="10" y2="14" />
+              </svg>
+            </button>
           </div>
 
           <div className="flex-1 overflow-y-auto p-4 space-y-3">
@@ -199,7 +196,7 @@ export function ChatPanel() {
             )}
 
             {messages.map((msg, i) => (
-              <MessageBubble key={i} message={msg} />
+              <BotMessage key={i} message={msg} />
             ))}
 
             {loading && messages[messages.length - 1]?.role !== "assistant" && <TypingIndicator />}

@@ -10,6 +10,7 @@ const navLinks = [
   { href: "/", key: "matches" },
   { href: "/standings", key: "standings" },
   { href: "/bracket", key: "bracket" },
+  { href: "/beebot", key: "beebot" },
 ] as const;
 
 export function Navbar() {

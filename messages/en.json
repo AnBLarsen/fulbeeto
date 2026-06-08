@@ -2,7 +2,8 @@
   "nav": {
     "matches": "Matches",
     "standings": "Standings",
-    "bracket": "Bracket"
+    "bracket": "Bracket",
+    "beebot": "BeeBot 🐝"
   },
   "games": {
     "title": "World Cup Matches 2026",
