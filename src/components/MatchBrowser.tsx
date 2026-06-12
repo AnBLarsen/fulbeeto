@@ -143,21 +143,77 @@ export function MatchBrowser({ initialDate }: MatchBrowserProps) {
     return () => { cancelled = true; };
   }, [retryCount]);
 
-  // ── Auto-refresh every 60 s while any match is live ───────────────────────
+  // ── Fetch full detail (goals, bookings, minute) for live+finished matches ──
   useEffect(() => {
     if (!allMatches) return;
-    const live = allMatches.some(
-      (m) => m.status === "IN_PLAY" || m.status === "PAUSED"
+    const targets = allMatches.filter(
+      (m) => m.status === "IN_PLAY" || m.status === "PAUSED" || m.status === "FINISHED"
     );
-    if (!live) return;
-    const id = setInterval(() => {
+    if (!targets.length) return;
+
+    async function fetchDetails() {
+      const results = await Promise.allSettled(
+        targets.map((m) =>
+          fetch(`/api/match/${m.id}`, { cache: "no-store" })
+            .then((r) => (r.ok ? r.json() : null))
+            .catch(() => null)
+        )
+      );
+      const enriched: Record<number, FDMatch> = {};
+      results.forEach((r, i) => {
+        if (r.status === "fulfilled" && r.value) {
+          enriched[targets[i].id] = r.value;
+        }
+      });
+      if (Object.keys(enriched).length) {
+        setAllMatches((prev) =>
+          prev
+            ? prev.map((m) => {
+                const detail = enriched[m.id];
+                if (!detail) return m;
+                // Only merge extra detail fields — never overwrite score or status
+                // from the list response, which is the authoritative source for those.
+                return {
+                  ...m,
+                  minute:   detail.minute   ?? m.minute,
+                  goals:    detail.goals    ?? m.goals,
+                  bookings: detail.bookings ?? m.bookings,
+                };
+              })
+            : prev
+        );
+      }
+    }
+
+    fetchDetails();
+  }, [allMatches?.map((m) => m.status).join(",")]);
+
+  // ── Auto-refresh: live matches every 60 s, or when a kickoff time has passed ─
+  useEffect(() => {
+    if (!allMatches) return;
+
+    const shouldRefresh = allMatches.some((m) => {
+      if (m.status === "IN_PLAY" || m.status === "PAUSED") return true;
+      // Also refresh if a scheduled match's kickoff time has already passed
+      if (m.status === "SCHEDULED" || m.status === "TIMED") {
+        return new Date(m.utcDate).getTime() <= Date.now();
+      }
+      return false;
+    });
+
+    if (!shouldRefresh) return;
+
+    const refetch = () => {
       fetch("/api/matches", { cache: "no-store" })
         .then((r) => r.ok ? r.json() : null)
-        .then((data) => { if (data) setAllMatches(data); })
+        .then((data) => { if (data?.length) setAllMatches(data); })
         .catch(() => {});
-    }, 60_000);
+    };
+
+    refetch(); // fetch immediately on mount if kickoff already passed
+    const id = setInterval(refetch, 60_000);
     return () => clearInterval(id);
-  }, [allMatches]);
+  }, [allMatches?.map((m) => `${m.id}:${m.status}`).join(",")]);
 
   // ── Scroll selected date into view ────────────────────────────────────────
   useEffect(() => {

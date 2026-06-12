@@ -13,22 +13,6 @@
 
   /* Custom font */
   --font-display: var(--font-display), system-ui, sans-serif;
-
-  /* Animations */
-  --animate-buzz: buzz 0.3s ease-in-out infinite;
-  --animate-float: float 3s ease-in-out infinite;
-  --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-@keyframes buzz {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-1px) rotate(-1deg); }
-  75% { transform: translateX(1px) rotate(1deg); }
-}
-
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
 }
 
 body {

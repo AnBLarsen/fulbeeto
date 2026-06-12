@@ -65,11 +65,12 @@ export async function getOpeningMatch(): Promise<FDMatch | null> {
   )[0];
 }
 
-/** Single match by ID */
+/** Single match by ID — includes goals, bookings, and minute */
 export async function getMatchResult(matchId: number): Promise<FDMatch | null> {
   try {
-    const data = await apiFetch<{ match: FDMatch }>(`/matches/${matchId}`);
-    return data.match ?? null;
+    // The v4 API returns the match at the top level, not nested under "match"
+    const data = await apiFetch<FDMatch & { match?: FDMatch }>(`/matches/${matchId}`);
+    return data.match ?? (data.id ? data : null);
   } catch {
     return null;
   }

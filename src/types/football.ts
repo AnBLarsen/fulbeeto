@@ -25,6 +25,22 @@ export type MatchStatus =
   | "SUSPENDED"
   | "CANCELLED";
 
+export interface FDGoal {
+  minute: number;
+  injuryTime?: number | null;
+  type: "NORMAL" | "OWN" | "PENALTY" | string;
+  team: { id: number; name: string };
+  scorer: { id: number; name: string } | null;
+  assist: { id: number; name: string } | null;
+}
+
+export interface FDBooking {
+  minute: number;
+  team: { id: number; name: string };
+  player: { id: number; name: string } | null;
+  card: "YELLOW_CARD" | "YELLOW_RED_CARD" | "RED_CARD" | string;
+}
+
 export interface FDMatch {
   id: number;
   utcDate: string;
@@ -35,6 +51,9 @@ export interface FDMatch {
   homeTeam: FDTeam;
   awayTeam: FDTeam;
   score: FDScore;
+  minute?: number | null;
+  goals?: FDGoal[];
+  bookings?: FDBooking[];
 }
 
 export interface FDStandingEntry {
@@ -91,3 +110,4 @@ export interface ChatMessage {
   content: string;
   thinking?: string; // reasoning text from tool-use turns, shown separately
 }
+

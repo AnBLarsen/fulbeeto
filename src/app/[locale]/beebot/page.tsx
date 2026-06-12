@@ -12,7 +12,7 @@ function TypingIndicator() {
   return (
     <div className="flex gap-3">
       <div className="shrink-0 mt-1">
-        <Image src="/ball.png" alt="Thinking" width={32} height={32} className="animate-float" />
+        <Image src="/ball.png" alt="Thinking" width={32} height={32} className="animate-bounce" />
       </div>
       <div className="bg-white/10 rounded-2xl rounded-tl-sm px-4 py-3 flex gap-1.5 items-center">
         {[0, 1, 2].map((i) => (

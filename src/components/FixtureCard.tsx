@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import type { FDMatch } from "@/types/football";
+import type { FDMatch, FDGoal, FDBooking } from "@/types/football";
 
 interface FixtureCardProps {
   match: FDMatch;
@@ -18,12 +18,12 @@ function localTz(): string {
 }
 
 function StatusBadge({ match }: { match: FDMatch }) {
-  const { status } = match;
+  const { status, minute } = match;
   if (status === "IN_PLAY" || status === "PAUSED") {
     return (
-      <span className="flex items-center gap-1 text-xs font-semibold text-bee-green animate-pulse-slow">
-        <span className="w-1.5 h-1.5 rounded-full bg-bee-green inline-block" />
-        {status === "PAUSED" ? "HT" : "LIVE"}
+      <span className="flex items-center gap-1.5 text-xs font-semibold text-bee-green animate-pulse-slow">
+        <span className="w-1.5 h-1.5 rounded-full bg-bee-green inline-block shrink-0" />
+        {status === "PAUSED" ? "HT" : minute ? `${minute}'` : "LIVE"}
       </span>
     );
   }
@@ -33,12 +33,59 @@ function StatusBadge({ match }: { match: FDMatch }) {
   if (status === "POSTPONED" || status === "CANCELLED" || status === "SUSPENDED") {
     return <span className="text-xs text-red-400 font-medium">{status}</span>;
   }
-  // SCHEDULED or TIMED — show the date since the time is already in the center
   const kickoff = new Date(match.utcDate);
   return (
     <span className="text-xs text-gray-500">
       {kickoff.toLocaleDateString([], { month: "short", day: "numeric" })}
     </span>
+  );
+}
+
+function GoalIcon() {
+  return <span className="text-[11px]">⚽</span>;
+}
+
+function CardIcon({ type }: { type: string }) {
+  if (type === "RED_CARD" || type === "YELLOW_RED_CARD") {
+    return <span className="inline-block w-2.5 h-3.5 rounded-[2px] bg-red-500 shrink-0" />;
+  }
+  return <span className="inline-block w-2.5 h-3.5 rounded-[2px] bg-yellow-400 shrink-0" />;
+}
+
+function GoalsList({ goals, teamId }: { goals: FDGoal[]; teamId: number }) {
+  const teamGoals = goals.filter((g) => g.team.id === teamId);
+  if (!teamGoals.length) return null;
+  return (
+    <div className="flex flex-col gap-0.5 mt-1">
+      {teamGoals.map((g, i) => (
+        <div key={i} className="flex items-center gap-1 text-[10px] text-gray-400 justify-center">
+          <GoalIcon />
+          <span className="truncate max-w-[80px]">
+            {g.scorer?.name?.split(" ").at(-1) ?? "OG"}
+            {g.type === "OWN" ? " (OG)" : g.type === "PENALTY" ? " (P)" : ""}
+          </span>
+          <span className="text-gray-600">{g.minute}'</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function BookingsList({ bookings, teamId }: { bookings: FDBooking[]; teamId: number }) {
+  const teamCards = bookings.filter((b) => b.team.id === teamId);
+  if (!teamCards.length) return null;
+  return (
+    <div className="flex flex-col gap-0.5 mt-1">
+      {teamCards.map((b, i) => (
+        <div key={i} className="flex items-center gap-1 text-[10px] text-gray-400 justify-center">
+          <CardIcon type={b.card} />
+          <span className="truncate max-w-[80px]">
+            {b.player?.name?.split(" ").at(-1) ?? "—"}
+          </span>
+          <span className="text-gray-600">{b.minute}'</span>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -67,16 +114,20 @@ function TeamCrest({ crest, name, size = 40 }: { crest: string | null; name: str
 }
 
 export function FixtureCard({ match }: FixtureCardProps) {
-  const { homeTeam, awayTeam, score, group, stage } = match;
-  const isLive    = match.status === "IN_PLAY" || match.status === "PAUSED";
+  const { homeTeam, awayTeam, score, group, stage, goals, bookings } = match;
+  const isLive      = match.status === "IN_PLAY" || match.status === "PAUSED";
+  const isFinished  = match.status === "FINISHED";
   const isScheduled = match.status === "SCHEDULED" || match.status === "TIMED";
-  const hasScore  = score.fullTime.home !== null && score.fullTime.away !== null;
-  const label     = group
+  const hasScore    = score.fullTime.home !== null && score.fullTime.away !== null;
+  const hasDetail   = (goals && goals.length > 0) || (bookings && bookings.length > 0);
+  const label       = group
     ? group.replace("_", " ")
     : stage.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
 
   const homeWon = score.winner === "HOME_TEAM";
   const awayWon = score.winner === "AWAY_TEAM";
+  const homeLeading = isLive && score.fullTime.home !== null && score.fullTime.away !== null && score.fullTime.home > score.fullTime.away;
+  const awayLeading = isLive && score.fullTime.home !== null && score.fullTime.away !== null && score.fullTime.away > score.fullTime.home;
 
   return (
     <div
@@ -101,7 +152,10 @@ export function FixtureCard({ match }: FixtureCardProps) {
           <span className="text-sm font-semibold text-center leading-tight">
             {homeTeam.shortName ?? "TBD"}
           </span>
-          {homeWon && <span className="text-[10px] text-bee-yellow">▲ Winner</span>}
+          {isFinished && homeWon && <span className="text-[10px] text-bee-yellow">▲ Winner</span>}
+          {homeLeading && <span className="text-[10px] text-bee-green">▲ Winning</span>}
+          {hasDetail && goals && <GoalsList goals={goals} teamId={homeTeam.id} />}
+          {hasDetail && bookings && <BookingsList bookings={bookings} teamId={homeTeam.id} />}
         </Link>
 
         {/* Score or kick-off time */}
@@ -122,9 +176,9 @@ export function FixtureCard({ match }: FixtureCardProps) {
             </div>
           )}
 
-          {/* Timezone — shown for scheduled matches; AET/Pen for finished */}
+          {/* Timezone / AET / Pen */}
           <span className="text-[10px] text-gray-600">
-            {match.status === "FINISHED" && score.duration !== "REGULAR"
+            {isFinished && score.duration !== "REGULAR"
               ? score.duration === "PENALTY_SHOOTOUT" ? "Pen" : "AET"
               : isScheduled
               ? localTz()
@@ -141,7 +195,10 @@ export function FixtureCard({ match }: FixtureCardProps) {
           <span className="text-sm font-semibold text-center leading-tight">
             {awayTeam.shortName ?? "TBD"}
           </span>
-          {awayWon && <span className="text-[10px] text-bee-yellow">▲ Winner</span>}
+          {isFinished && awayWon && <span className="text-[10px] text-bee-yellow">▲ Winner</span>}
+          {awayLeading && <span className="text-[10px] text-bee-green">▲ Winning</span>}
+          {hasDetail && goals && <GoalsList goals={goals} teamId={awayTeam.id} />}
+          {hasDetail && bookings && <BookingsList bookings={bookings} teamId={awayTeam.id} />}
         </Link>
       </div>
     </div>
