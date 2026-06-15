@@ -5,6 +5,9 @@ import { getFixtures, getStandings, getTeamMatches, getMatchResult, getTeamDetai
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import type { ChatMessage } from "@/types/football";
 
+// Allow up to 60 s on Vercel — the agentic loop + streaming can exceed the 10 s default
+export const maxDuration = 60;
+
 const client = new Anthropic();
 
 // ─── Limits ───────────────────────────────────────────────────────────────────
