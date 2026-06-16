@@ -5,6 +5,11 @@ import { useTranslations, useLocale } from "next-intl";
 import type { FDMatch } from "@/types/football";
 import { FixtureCard } from "./FixtureCard";
 
+// ─── Module-level cache for match details ─────────────────────────────────────
+// Persists across re-renders. Finished matches never change, so no expiry needed.
+// Live matches are refetched each refresh cycle since they won't be in here until fetched.
+const detailCache = new Map<number, FDMatch>();
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 /** Local-date string YYYY-MM-DD for today */
@@ -143,26 +148,45 @@ export function MatchBrowser({ initialDate }: MatchBrowserProps) {
     return () => { cancelled = true; };
   }, [retryCount]);
 
-  // ── Fetch full detail (goals, bookings, minute) for live+finished matches ──
+  // ── Fetch full detail (goals, bookings, minute) — only for displayed matches ─
+  // We deliberately avoid fetching the entire tournament's finished matches at
+  // once; the free-tier API is 10 req/min, so we scope requests to what's
+  // visible. A module-level cache prevents re-fetching when the user switches
+  // date tabs and comes back.
   useEffect(() => {
     if (!allMatches) return;
+    // Compute which matches are currently on screen (same logic as displayMatches below)
+    const visible = allMatches.filter((m) =>
+      mode === "group" && selectedGroup
+        ? m.group === selectedGroup
+        : matchDate(m) === selectedDate
+    );
+    const visibleIds = new Set(visible.map((m) => m.id));
     const targets = allMatches.filter(
-      (m) => m.status === "IN_PLAY" || m.status === "PAUSED" || m.status === "FINISHED"
+      (m) =>
+        visibleIds.has(m.id) &&
+        (m.status === "IN_PLAY" || m.status === "PAUSED" || m.status === "FINISHED") &&
+        !detailCache.has(m.id)
     );
     if (!targets.length) return;
 
     async function fetchDetails() {
       const results = await Promise.allSettled(
-        targets.map((m) =>
-          fetch(`/api/match/${m.id}`, { cache: "no-store" })
+        targets.map((m) => {
+          const qs = m.status === "FINISHED" ? "?finished=1" : "";
+          return fetch(`/api/match/${m.id}${qs}`, {
+            cache: m.status === "FINISHED" ? "default" : "no-store",
+          })
             .then((r) => (r.ok ? r.json() : null))
-            .catch(() => null)
-        )
+            .catch(() => null);
+        })
       );
       const enriched: Record<number, FDMatch> = {};
       results.forEach((r, i) => {
         if (r.status === "fulfilled" && r.value) {
-          enriched[targets[i].id] = r.value;
+          const match = targets[i];
+          detailCache.set(match.id, r.value);
+          enriched[match.id] = r.value;
         }
       });
       if (Object.keys(enriched).length) {
@@ -186,7 +210,13 @@ export function MatchBrowser({ initialDate }: MatchBrowserProps) {
     }
 
     fetchDetails();
-  }, [allMatches?.map((m) => m.status).join(",")]);
+  // Re-run when the visible set changes (date/group switch or new status from refresh)
+  }, [
+    allMatches?.map((m) => m.status).join(","),
+    selectedDate,
+    selectedGroup,
+    mode,
+  ]);
 
   // ── Auto-refresh: live matches every 60 s, or when a kickoff time has passed ─
   useEffect(() => {

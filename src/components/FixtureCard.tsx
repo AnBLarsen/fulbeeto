@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useLocale } from "next-intl";
 import type { FDMatch, FDGoal, FDBooking } from "@/types/football";
 
 interface FixtureCardProps {
@@ -114,6 +115,7 @@ function TeamCrest({ crest, name, size = 40 }: { crest: string | null; name: str
 }
 
 export function FixtureCard({ match }: FixtureCardProps) {
+  const locale = useLocale();
   const { homeTeam, awayTeam, score, group, stage, goals, bookings } = match;
   const isLive      = match.status === "IN_PLAY" || match.status === "PAUSED";
   const isFinished  = match.status === "FINISHED";
@@ -145,7 +147,7 @@ export function FixtureCard({ match }: FixtureCardProps) {
       <div className="flex items-center justify-between gap-4">
         {/* Home */}
         <Link
-          href={homeTeam.id ? `/teams/${homeTeam.id}` : "#"}
+          href={homeTeam.id ? `/${locale}/teams/${homeTeam.id}` : "#"}
           className="flex flex-col items-center gap-1.5 flex-1 hover:opacity-80 transition-opacity"
         >
           <TeamCrest crest={homeTeam.crest} name={homeTeam.name} size={40} />
@@ -188,7 +190,7 @@ export function FixtureCard({ match }: FixtureCardProps) {
 
         {/* Away */}
         <Link
-          href={awayTeam.id ? `/teams/${awayTeam.id}` : "#"}
+          href={awayTeam.id ? `/${locale}/teams/${awayTeam.id}` : "#"}
           className="flex flex-col items-center gap-1.5 flex-1 hover:opacity-80 transition-opacity"
         >
           <TeamCrest crest={awayTeam.crest} name={awayTeam.name} size={40} />

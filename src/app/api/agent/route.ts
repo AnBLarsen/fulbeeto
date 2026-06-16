@@ -53,7 +53,12 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
         return `Unknown tool: ${name}`;
     }
   } catch (err) {
-    return `Error: ${err instanceof Error ? err.message : "Tool error"}`;
+    const msg = err instanceof Error ? err.message : "Tool error";
+    // Rate limit: return a user-friendly message Claude can relay without quoting raw API errors
+    if (msg.startsWith("RATE_LIMITED:")) {
+      return "The football data API is temporarily rate-limited. Tell the user: \"I hit the data API's request limit — please wait about a minute and ask me again.\"";
+    }
+    return `Error: ${msg}`;
   }
 }
 

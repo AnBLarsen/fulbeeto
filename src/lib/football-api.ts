@@ -14,12 +14,35 @@ function getHeaders() {
   return { "X-Auth-Token": key };
 }
 
+// ─── Server-side in-memory cache ─────────────────────────────────────────────
+// Reduces API calls so the free tier's 10 req/min limit is less likely to be hit.
+// Keys: full URL string. TTL: 5 min for finished match details, 60 s for everything else.
+const _cache = new Map<string, { data: unknown; expires: number }>();
+const TTL_DEFAULT = 60_000;        // 60 s
+const TTL_FINISHED = 5 * 60_000;  // 5 min — finished matches never change
+
+function getCached<T>(key: string): T | undefined {
+  const entry = _cache.get(key);
+  if (entry && entry.expires > Date.now()) return entry.data as T;
+  _cache.delete(key);
+  return undefined;
+}
+
+function setCache(key: string, data: unknown, ttl = TTL_DEFAULT) {
+  _cache.set(key, { data, expires: Date.now() + ttl });
+}
+
 async function apiFetch<T>(
   path: string,
-  params: Record<string, string> = {}
+  params: Record<string, string> = {},
+  ttl?: number
 ): Promise<T> {
   const url = new URL(`${BASE_URL}${path}`);
   Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+  const key = url.toString();
+
+  const hit = getCached<T>(key);
+  if (hit !== undefined) return hit;
 
   const res = await fetch(url.toString(), {
     headers: getHeaders(),
@@ -29,15 +52,34 @@ async function apiFetch<T>(
   const text = await res.text();
 
   if (!res.ok) {
+    // Expose rate-limit errors with a clear prefix so callers can handle them
+    if (res.status === 429) {
+      let wait = "a moment";
+      try {
+        const secs = Number(res.headers.get("X-RequestCounter-Reset") ?? "0");
+        if (secs > 0) wait = `${secs} second${secs !== 1 ? "s" : ""}`;
+      } catch { /* ignore */ }
+      throw new Error(`RATE_LIMITED: The football data API rate limit was reached. Please wait ${wait} and try again.`);
+    }
     let msg = `${res.status} ${res.statusText}`;
     try {
       const json = JSON.parse(text);
-      if (json.message) msg = json.message;
-    } catch { /* ignore */ }
+      if (json.message) {
+        // Some 429 responses come back as 200 with a message — detect them too
+        if (json.message.toLowerCase().includes("request limit") || json.message.toLowerCase().includes("rate limit")) {
+          throw new Error(`RATE_LIMITED: ${json.message}`);
+        }
+        msg = json.message;
+      }
+    } catch (inner) {
+      if ((inner as Error).message?.startsWith("RATE_LIMITED:")) throw inner;
+    }
     throw new Error(`football-data.org ${path} → ${msg}`);
   }
 
-  return JSON.parse(text) as T;
+  const data = JSON.parse(text) as T;
+  setCache(key, data, ttl ?? TTL_DEFAULT);
+  return data;
 }
 
 // ─── Public helpers ───────────────────────────────────────────────────────────
@@ -66,10 +108,14 @@ export async function getOpeningMatch(): Promise<FDMatch | null> {
 }
 
 /** Single match by ID — includes goals, bookings, and minute */
-export async function getMatchResult(matchId: number): Promise<FDMatch | null> {
+export async function getMatchResult(matchId: number, finished = false): Promise<FDMatch | null> {
   try {
     // The v4 API returns the match at the top level, not nested under "match"
-    const data = await apiFetch<FDMatch & { match?: FDMatch }>(`/matches/${matchId}`);
+    const data = await apiFetch<FDMatch & { match?: FDMatch }>(
+      `/matches/${matchId}`,
+      {},
+      finished ? TTL_FINISHED : TTL_DEFAULT
+    );
     return data.match ?? (data.id ? data : null);
   } catch {
     return null;
@@ -79,7 +125,9 @@ export async function getMatchResult(matchId: number): Promise<FDMatch | null> {
 /** All group standings — optionally filter to a single group (e.g. "GROUP_A") */
 export async function getStandings(group?: string): Promise<FDStandingsResponse> {
   const data = await apiFetch<FDStandingsResponse>(
-    `/competitions/${COMPETITION}/standings`
+    `/competitions/${COMPETITION}/standings`,
+    {},
+    TTL_FINISHED // standings change only after matches end — cache for 5 min
   );
   if (!group) return data;
 

@@ -30,11 +30,7 @@ export default async function StandingsPage() {
 
       {error && (
         <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
-          <strong>Bzzt.</strong> {error}
-          <p className="mt-1 text-xs text-gray-500">
-            Check that <code className="bg-white/10 px-1 rounded">FOOTBALL_DATA_KEY</code> is set in{" "}
-            <code className="bg-white/10 px-1 rounded">.env.local</code>.
-          </p>
+          <strong>Bzzt.</strong> Could not load standings right now. Try refreshing the page.
         </div>
       )}
 
